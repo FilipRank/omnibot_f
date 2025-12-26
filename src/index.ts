@@ -38,7 +38,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 
     const text = generateCharacterList(characters);
     console.log(text);
-    // channel.send(text);
+    channel.send(text);
 });
 
 client.on("threadCreate", async (thread: ThreadChannel) => {
@@ -50,7 +50,7 @@ client.on("threadCreate", async (thread: ThreadChannel) => {
     const channel = (await client.channels.fetch(channelID)) as TextChannel;
 
     console.log(text);
-    // await editLastMessage(channel, text);
+    await editLastMessage(channel, text);
 });
 
 client.on("threadUpdate", async (thread: ThreadChannel) => {
@@ -62,7 +62,7 @@ client.on("threadUpdate", async (thread: ThreadChannel) => {
     const channel = (await client.channels.fetch(channelID)) as TextChannel;
 
     console.log(text);
-    // await editLastMessage(channel, text);
+    await editLastMessage(channel, text);
 });
 
 client.on("threadDelete", async (thread: ThreadChannel) => {
@@ -74,7 +74,7 @@ client.on("threadDelete", async (thread: ThreadChannel) => {
     const channel = (await client.channels.fetch(channelID)) as TextChannel;
 
     console.log(text);
-    // await editLastMessage(channel, text);
+    await editLastMessage(channel, text);
 });
 
 function generateCharacterList(characters: Character[]): string {
@@ -83,15 +83,15 @@ function generateCharacterList(characters: Character[]): string {
         text += `# ${clan}\n`;
         Roles.forEach((role: Role) => {
             if (clan.endsWith("clan")) {
-                text += `### ${role}:\n`;
+                text += `\n**${role}:**\n`;
             }
             characters.forEach((character: Character) => {
                 if (character.clan?.endsWith(clan) && character.role?.endsWith(role)) {
-                    text += `- ${character.name}\n`;
+                    text += `${character.name}\n`;
                 } else if (role == "Kittypet" && character.role?.endsWith("Kittypet")) {
-                    text += `- ${character.name}\n`;
+                    text += `${character.name}\n`;
                 } else if (role == "Loner/Rogue" && character.role?.endsWith("Loner/Rogue")) {
-                    text += `- ${character.name}\n`;
+                    text += `${character.name}\n`;
                 }
             });
         });

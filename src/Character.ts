@@ -13,7 +13,7 @@ export const Roles = [
     "Warrior",
     "Apprentice",
     "Medicine cat",
-    "Medicine cat apprentice",
+    "Medicine cat app.",
     "King/Queen",
     "Kit",
     "Loner/Rogue",
