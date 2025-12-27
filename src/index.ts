@@ -99,22 +99,30 @@ client.on("guildMemberRemove", async () => {
 
 function generateCharacterList(characters: Character[]): string {
     let text = "";
+    text += `Characters (${characters.length})\n`;
     Clans.forEach((clan: Clan) => {
-        text += `# ${clan}\n`;
+        let clanCount = characters.filter((c) => c.clan?.endsWith(clan)).length;
+        text += `# ${clan} (${clanCount})\n`;
         Roles.forEach((role: Role) => {
-            if (clan.endsWith("clan")) {
+            if (!(role.endsWith("Kittypet") || role.endsWith("Loner/Rogue"))) {
                 text += `\n**${role}:**\n`;
             }
             characters.forEach((character: Character) => {
                 if (character.clan?.endsWith(clan) && character.role?.endsWith(role)) {
                     text += `${character.name}\n`;
-                } else if (role == "Kittypet" && character.role?.endsWith("Kittypet")) {
-                    text += `${character.name}\n`;
-                } else if (role == "Loner/Rogue" && character.role?.endsWith("Loner/Rogue")) {
-                    text += `${character.name}\n`;
                 }
             });
         });
+    });
+    let kittypets = characters.filter((c) => c.role?.endsWith("Kittypet"));
+    let roguesAndLoners = characters.filter((c) => c.role?.endsWith("Loner/Rogue"));
+    text += `# Kittypets (${kittypets.length})\n`;
+    kittypets.forEach((k) => {
+        text += `${k.name}\n`;
+    });
+    text += `# Rogues/Loners (${roguesAndLoners.length})\n`;
+    roguesAndLoners.forEach((r) => {
+        text += `${r.name}\n`;
     });
     return text;
 }
