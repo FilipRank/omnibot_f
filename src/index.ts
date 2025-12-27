@@ -77,6 +77,26 @@ client.on("threadDelete", async (thread: ThreadChannel) => {
     await editLastMessage(channel, text);
 });
 
+client.on("guildMemberAdd", async () => {
+    const characters = await getAllCharactersFromForum(forumID);
+    const text = generateCharacterList(characters);
+
+    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+
+    console.log(text);
+    await editLastMessage(channel, text);
+});
+
+client.on("guildMemberRemove", async () => {
+    const characters = await getAllCharactersFromForum(forumID);
+    const text = generateCharacterList(characters);
+
+    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+
+    console.log(text);
+    await editLastMessage(channel, text);
+});
+
 function generateCharacterList(characters: Character[]): string {
     let text = "";
     Clans.forEach((clan: Clan) => {
