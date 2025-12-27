@@ -63,11 +63,12 @@ async function displayAllegiances() {
     const channel = (await client.channels.fetch(channelID!)) as TextChannel;
 
     console.log(text);
-    characterEmbed = new EmbedBuilder().setTitle("Allegiances").setDescription(text);
     if (!characterEmbed) {
+        characterEmbed = new EmbedBuilder().setTitle("Allegiances").setDescription(text);
         channel.send({ embeds: [characterEmbed] });
         return;
     }
+    characterEmbed = new EmbedBuilder().setTitle("Allegiances").setDescription(text);
     editLastMessage(channel, characterEmbed);
 }
 
