@@ -1,7 +1,11 @@
+import type { User } from "discord.js";
+
 export interface Character {
     name: string;
     clan: Clan | undefined;
     role: Role | undefined;
+    owner: User;
+    threadId: string;
 }
 
 // constants.ts

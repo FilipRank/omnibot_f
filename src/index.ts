@@ -1,5 +1,7 @@
 import {
     Client,
+    Embed,
+    EmbedBuilder,
     Events,
     ForumChannel,
     GatewayIntentBits,
@@ -13,6 +15,8 @@ import {
 import { Clans, Roles, type Character, type Clan, type Role } from "./Character.ts";
 import { channel } from "node:diagnostics_channel";
 import dotenv from "dotenv";
+import { threadId } from "node:worker_threads";
+import { userInfo } from "node:os";
 
 dotenv.config();
 
@@ -25,77 +29,47 @@ if (!token || !forumID || !channelID) {
 }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+let characterEmbed: EmbedBuilder;
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-
-    const forum = (await client.channels.fetch(forumID)) as ForumChannel;
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
-
-    const threads: FetchedThreads = await forum.threads.fetch();
-
-    const characters: Character[] = await getAllCharactersFromForum(forumID);
-
-    const text = generateCharacterList(characters);
-    console.log(text);
-    channel.send(text);
+    displayAllegiances();
 });
 
 client.on("threadCreate", async (thread: ThreadChannel) => {
-    if (thread.parentId !== forumID) return;
-
-    const characters = await getAllCharactersFromForum(forumID);
-    const text = generateCharacterList(characters);
-
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
-
-    console.log(text);
-    await editLastMessage(channel, text);
+    displayAllegiances();
 });
 
 client.on("threadUpdate", async (thread: ThreadChannel) => {
-    if (thread.parentId !== forumID) return;
-
-    const characters = await getAllCharactersFromForum(forumID);
-    const text = generateCharacterList(characters);
-
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
-
-    console.log(text);
-    await editLastMessage(channel, text);
+    displayAllegiances();
 });
 
 client.on("threadDelete", async (thread: ThreadChannel) => {
-    if (thread.parentId !== forumID) return;
-
-    const characters = await getAllCharactersFromForum(forumID);
-    const text = generateCharacterList(characters);
-
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
-
-    console.log(text);
-    await editLastMessage(channel, text);
+    displayAllegiances();
 });
 
 client.on("guildMemberAdd", async () => {
-    const characters = await getAllCharactersFromForum(forumID);
-    const text = generateCharacterList(characters);
-
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
-
-    console.log(text);
-    await editLastMessage(channel, text);
+    displayAllegiances();
 });
 
 client.on("guildMemberRemove", async () => {
-    const characters = await getAllCharactersFromForum(forumID);
+    displayAllegiances();
+});
+
+async function displayAllegiances() {
+    const characters = await getAllCharactersFromForum(forumID!);
     const text = generateCharacterList(characters);
 
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+    const channel = (await client.channels.fetch(channelID!)) as TextChannel;
 
     console.log(text);
-    await editLastMessage(channel, text);
-});
+    if (!characterEmbed) {
+        characterEmbed = new EmbedBuilder().setTitle("Allegiances").setDescription(text);
+        channel.send({ embeds: [characterEmbed] });
+        return;
+    }
+    editLastMessage(channel, characterEmbed);
+}
 
 function generateCharacterList(characters: Character[]): string {
     let text = "";
@@ -107,9 +81,9 @@ function generateCharacterList(characters: Character[]): string {
             if (!(role.endsWith("Kittypet") || role.endsWith("Loner/Rogue"))) {
                 text += `\n**${role}:**\n`;
             }
-            characters.forEach((character: Character) => {
+            characters.forEach(async (character: Character) => {
                 if (character.clan?.endsWith(clan) && character.role?.endsWith(role)) {
-                    text += `${character.name}\n`;
+                    text += `- ${character.name} (${character.owner.displayName}) <#${character.threadId}>\n`;
                 }
             });
         });
@@ -118,17 +92,17 @@ function generateCharacterList(characters: Character[]): string {
     let roguesAndLoners = characters.filter((c) => c.role?.endsWith("Loner/Rogue"));
     text += `# Kittypets (${kittypets.length})\n`;
     kittypets.forEach((k) => {
-        text += `${k.name}\n`;
+        text += `- ${k.name} (${k.owner.displayName}) <#${k.threadId}>\n`;
     });
     text += `# Rogues/Loners (${roguesAndLoners.length})\n`;
     roguesAndLoners.forEach((r) => {
-        text += `${r.name}\n`;
+        text += `- ${r.name} (${r.owner.displayName}) <#${r.threadId}>\n`;
     });
     return text;
 }
 
-async function getAllCharactersFromForum(threadId: string): Promise<Character[]> {
-    const forum = (await client.channels.fetch(threadId)) as ForumChannel;
+async function getAllCharactersFromForum(forumID: string): Promise<Character[]> {
+    const forum = (await client.channels.fetch(forumID)) as ForumChannel;
     const activeThreads = await forum.threads.fetchActive();
     const archivedThreads = await forum.threads.fetchArchived();
     const threads = new Map([...activeThreads.threads, ...archivedThreads.threads]);
@@ -140,10 +114,13 @@ async function getAllCharactersFromForum(threadId: string): Promise<Character[]>
         );
         const clan = tags.find((tag) => tag?.name.endsWith("clan"))?.name as Clan | undefined;
         const role = tags.find((tag) => !tag?.name.endsWith("clan"))?.name as Role | undefined;
+        const owner = await client.users.fetch(thread.ownerId);
         const character: Character = {
             name: thread.name,
             clan: clan,
             role: role,
+            owner: owner,
+            threadId: thread.id,
         };
 
         let memberStillInGuild = false;
@@ -164,7 +141,7 @@ async function getAllCharactersFromForum(threadId: string): Promise<Character[]>
     return characters;
 }
 
-async function editLastMessage(channel: TextChannel, newContent: string) {
+async function editLastMessage(channel: TextChannel, embed: EmbedBuilder) {
     try {
         const messages = await channel.messages.fetch({ limit: 1 });
         const lastMessage = messages.first();
@@ -174,7 +151,7 @@ async function editLastMessage(channel: TextChannel, newContent: string) {
             return;
         }
 
-        await lastMessage.edit(newContent);
+        await lastMessage.edit({ embeds: [embed] });
         console.log("Message edited successfully!");
     } catch (err) {
         console.error("Failed to edit message:", err);
